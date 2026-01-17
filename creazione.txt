@@ -1,0 +1,91 @@
+CREATE TABLE utente (
+	username VARCHAR(32) UNIQUE NOT NULL PRIMARY KEY,	
+	email VARCHAR(32) UNIQUE NOT NULL,
+	password_account character(161) NOT NULL,
+	img_profilo TEXT,
+	amministratore BOOLEAN DEFAULT false,
+	moderatore BOOLEAN DEFAULT false,
+	data_inizio_mod DATE,
+	sessID VARCHAR(32) DEFAULT NULL,
+	-- 1. Coerenza moderatore ↔ data_inizio_mod
+	CHECK (
+	    (moderatore = true AND data_inizio_mod IS NOT NULL)
+	    OR
+	    (moderatore = false AND data_inizio_mod IS NULL)
+	),
+	-- 2. Coerenza amministratore → moderatore = true e data_inizio_mod presente
+	CHECK (
+	    (amministratore = false)
+	    OR
+	    (amministratore = true AND moderatore = true AND data_inizio_mod IS NOT NULL)
+	)
+);
+
+CREATE TABLE post (
+	id SERIAL PRIMARY KEY,
+	username_utente VARCHAR(32) REFERENCES utente (username) ON DELETE CASCADE, 
+	data_creazione DATE NOT NULL,
+	tipo_testo BOOLEAN DEFAULT true, 		-- indica se il post è testuale = true o con immagine = false	
+	contenuto VARCHAR(150),
+	url TEXT,
+	username_moderatore VARCHAR (32) REFERENCES utente (username),
+	data_moderazione DATE,
+	-- 1. coerenza tra moderatore e data moderazione
+	CHECK (
+        (username_moderatore IS NOT NULL AND data_moderazione IS NOT NULL)
+        OR
+        (username_moderatore IS NULL AND data_moderazione IS NULL)
+    ),
+	-- 2. Coerenza tra tipo_testo e campi contenuto/url
+	CHECK (
+	    (tipo_testo = true AND contenuto IS NOT NULL AND url IS NULL)
+	    OR
+	    (tipo_testo = false AND contenuto IS NULL AND url IS NOT NULL)
+	)
+);
+
+CREATE TABLE post_like (
+	username_utente VARCHAR (32) REFERENCES utente (username) ON DELETE CASCADE,
+	id_post INTEGER REFERENCES post (id) ON DELETE CASCADE,
+	PRIMARY KEY(username_utente, id_post)
+);
+
+CREATE TABLE post_flag (
+	username_utente VARCHAR(32) REFERENCES utente (username) ON DELETE CASCADE,
+	id_post INTEGER REFERENCES post (id) ON DELETE CASCADE,
+	PRIMARY KEY(username_utente, id_post)
+);
+
+CREATE TABLE seguire(
+	username_seguito VARCHAR(32) REFERENCES utente (username) ON DELETE CASCADE,
+	username_seguitore VARCHAR(32) REFERENCES utente (username) ON DELETE CASCADE,
+	PRIMARY KEY(username_seguito, username_seguitore),
+	CHECK (username_seguito <> username_seguitore)
+);
+
+
+INSERT INTO utente (username, email, password_account, amministratore, moderatore, data_inizio_mod) VALUES ('gio', 'giorgia@gmail.com', 'fa433fbf2db60761f6e0b3539a859bd6b8242f1884bc0c7ee9623128867b5deeaed980bb4bd081cfd1fddd34a64de10392ca31dc0e429ba27bd953aa8403349f.44435d3a30e77e3d666f8b80766190b3', true, true, '2025-06-12');
+INSERT INTO utente (username, email, password_account, moderatore, data_inizio_mod) VALUES ('marta', 'marta@gmail.com', 'fc78bbda02aa5d4b4e4f0a02ac69d1300a564a1882723ebef1cbc703d51519baa8158475e8bbbf90a9ed5dac1086b356a168ffbbb79c454a8833bd609c694f68.6a359585a53633633fa4cc0ce32098e4', true, '2025-06-15');
+INSERT INTO utente (username, email, password_account) VALUES ('davide', 'davide@gmai.com', 'dc29783a6e51b2db9eacff3f5e10f9e47699b9eff62f3756ffdc5f9ae389a257ef26ea237b095cd01e4f876ac9f8223af8740a0aaa727c1b93c272b6b2d0f32c.2975913e9ff69db739853a32a34e555a');
+INSERT INTO utente (username, email, password_account) VALUES ('wiky', 'wiktor@gmai.com', '40b24ca0704d4a01584ebab9351a12df1cf71a78d5a84a01a59b6239b9ca2183123e883cef913aa86da15031a30016eef0f5674cc5aab230eb38786ffbe94977.2f1e015284c62118a04e0d581d7267bd');
+
+
+INSERT INTO post (username_utente, data_creazione, tipo_testo, contenuto) VALUES ('gio', '2025-05-12', true, 'Ciao a tutti!');
+INSERT INTO post (username_utente, data_creazione, tipo_testo, contenuto) VALUES ('davide', '2025-05-12', true, 'Salve a tutti!');
+INSERT INTO post (username_utente, data_creazione, tipo_testo, contenuto) VALUES ('wiky', '2025-06-01',  true, 'Buona la carbonara');
+INSERT INTO post (username_utente, data_creazione, tipo_testo, contenuto) VALUES ('wiky', '2025-06-02',  true, 'Che belle le rane');
+INSERT INTO post (username_utente, data_creazione, tipo_testo, contenuto) VALUES ('marta', '2025-06-03', true, 'I panda rossi sono bellissimi');
+
+
+INSERT INTO post_like (username_utente, id_post) VALUES  ('gio', 5), ('wiky', 5), ('davide', 3), ('marta', 1), ('marta', 3), ('davide', 5);
+
+
+INSERT INTO post_flag (username_utente, id_post) VALUES  ('gio', 4), ('marta', 4);
+
+
+INSERT INTO seguire (username_seguito, username_seguitore)
+VALUES 
+('marta', 'gio'),
+('davide', 'gio'),
+('gio', 'wiky'),
+('gio', 'marta');  
